@@ -1,0 +1,1052 @@
+clc;
+clear all;
+close all;
+
+% READING THE IMAGE
+
+rgbImage1 = imread('peppers.png');
+
+% RESIZING IT TO 256 X 256 PIXELS 
+rgbImage1=imresize(rgbImage1,[256 256]);
+
+%SPLITTING INTO 3 CHANNELS - RED, GREEN, BLUE, INTENSITY, RE, GR, REGR, BLYE  
+figure(1);
+rgbR=rgbImage1(:,:,1);
+subplot(2,5,1);
+imshow(rgbR);
+title('r');
+rgbG=rgbImage1(:,:,2);
+subplot(2,5,2);
+imshow(rgbG);
+title('g');
+rgbB=rgbImage1(:,:,3);
+subplot(2,5,3);
+imshow(rgbB);
+title('b');
+for r = 1 : 256
+for c = 1 : 256
+    Intensity(r,c)= (rgbR(r,c)+ rgbG(r,c)+ rgbB(r,c))/3;
+end
+end
+subplot(2,5,4);
+imshow(Intensity);
+title('INTENSITY');
+for r = 1 : 256
+for c = 1 : 256
+    RE(r,c)= rgbR(r,c)-(rgbG(r,c)+ rgbB(r,c))/2;
+end
+end
+subplot(2,5,5);
+imshow(RE);
+title('RE');
+for r = 1 : 256
+for c = 1 : 256
+   GR(r,c)= (-(rgbG(r,c))+(rgbR(r,c)+ rgbB(r,c))/2);
+end
+end
+subplot(2,5,6);
+imshow(GR);
+title('GR');
+for r = 1 : 256
+for c = 1 : 256
+    BL(r,c)= rgbB(r,c)-(rgbR(r,c)+ rgbG(r,c))/2;
+end
+end
+subplot(2,5,7);
+imshow(BL);
+title('BL');
+for r = 1 : 256
+for c = 1 : 256
+    q=rgbR(r,c)-rgbG(r,c);
+    if(q<0)
+        q=q*-1;
+    end
+        
+    YELLOW(r,c)=((rgbR(r,c)+rgbG(r,c))/2)-(q/2)-rgbB(r,c);
+end
+end
+subplot(2,5,8);
+imshow(YELLOW);
+title('YELLOW');
+for r = 1 : 256
+for c = 1 : 256
+    REGR(r,c)= rgbR(r,c)-rgbG(r,c);
+end
+end
+subplot(2,5,9);
+imshow(REGR);
+title('REGR');
+for r = 1 : 256
+for c = 1 : 256
+    BLYE(r,c)= rgbB(r,c)-YELLOW(r,c);
+end
+end
+subplot(2,5,10);
+imshow(BLYE);
+title('BLYE');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+block_size=8;
+Cr= mat2cell(rgbR, repmat(block_size,[1 size(rgbR,1)/block_size]),...
+     repmat(block_size,[1 size(rgbR,2)/block_size]));
+Cg = mat2cell(rgbG, repmat(block_size,[1 size(rgbG,1)/block_size]),...
+     repmat(block_size,[1 size(rgbG,2)/block_size]));
+Cb = mat2cell(rgbB, repmat(block_size,[1 size(rgbB,1)/block_size]),...
+     repmat(block_size,[1 size(rgbB,2)/block_size]));
+CRE= mat2cell(RE, repmat(block_size,[1 size(RE,1)/block_size]),...
+     repmat(block_size,[1 size(RE,2)/block_size]));
+CGR = mat2cell(GR, repmat(block_size,[1 size(GR,1)/block_size]),...
+     repmat(block_size,[1 size(GR,2)/block_size]));
+CBL = mat2cell(BL, repmat(block_size,[1 size(BL,1)/block_size]),...
+     repmat(block_size,[1 size(BL,2)/block_size]));
+CIntensity= mat2cell(Intensity, repmat(block_size,[1 size(Intensity,1)/block_size]),...
+     repmat(block_size,[1 size(Intensity,2)/block_size]));
+CREGR = mat2cell(REGR, repmat(block_size,[1 size(REGR,1)/block_size]),...
+     repmat(block_size,[1 size(REGR,2)/block_size]));
+CBLYE = mat2cell(BLYE, repmat(block_size,[1 size(BLYE,1)/block_size]),...
+     repmat(block_size,[1 size(BLYE,2)/block_size]));
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(Cr{r,c});
+[~,n]=size(Cr{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tr(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+figure(2);
+subplot(3,6,1);
+imshow(tr);
+title('WHT of r channel');
+subplot(3,6,2);
+imshow(log(abs(tr)),[ ]); colormap(jet); colorbar;
+title('abs r chl');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(Cg{r,c});
+[~,n]=size(Cg{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tg(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,3);
+imshow(tg);
+title('WHT of g channel');
+subplot(3,6,4);
+imshow(log(abs(tg)),[ ]); colormap(jet); colorbar;title('abs g chl');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(Cb{r,c});
+[~,n]=size(Cb{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tb(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,5);
+imshow(tb);
+title('WHT of b channel');
+subplot(3,6,6);
+imshow(log(abs(tb)),[ ]); colormap(jet); colorbar;
+title('abs b chl');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(CRE{r,c});
+[~,n]=size(CRE{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tRE(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,7);
+imshow(tRE);
+title('WHT of RE channel');
+subplot(3,6,8);
+imshow(log(abs(tRE)),[ ]); colormap(jet); colorbar;
+title('abs RE chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(CGR{r,c});
+[~,n]=size(CGR{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tGR(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,9);
+imshow(tGR);
+title('WHT of GR channel');
+subplot(3,6,10);
+imshow(log(abs(tGR)),[ ]); colormap(jet); colorbar;
+title('abs GR chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(CBL{r,c});
+[~,n]=size(CBL{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tBL(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,11);
+imshow(tBL);
+title('WHT of BL channel');
+subplot(3,6,12);
+imshow(log(abs(tBL)),[ ]); colormap(jet); colorbar;
+title('abs BL chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(CIntensity{r,c});
+[~,n]=size(CIntensity{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tIntensity(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,13);
+imshow(tIntensity);
+title('WHT of Intensity channel');
+subplot(3,6,14);
+imshow(log(abs(tIntensity)),[ ]); colormap(jet); colorbar;
+title('abs Intensity chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(CREGR{r,c});
+[~,n]=size(CREGR{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tREGR(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,15);
+imshow(tREGR);
+title('WHT of REGR channel');
+subplot(3,6,16);
+imshow(log(abs(tREGR)),[ ]); colormap(jet); colorbar;
+title('abs REGR chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for r = 1:32
+    for c = 1:32 
+b=double(CBLYE{r,c});
+[~,n]=size(CBLYE{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tBLYE(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,6,17);
+imshow(tBLYE);
+title('WHT of BLYE channel');
+subplot(3,6,18);
+imshow(log(abs(tBLYE)),[ ]); colormap(jet); colorbar;
+title('abs BLYE chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+figure(3);
+Xr=sign(tr);
+subplot(3,3,1);
+imshow(Xr);
+title('Signum of r chl');
+Xg=sign(tg);
+subplot(3,3,2);
+imshow(Xg);
+title('Signum of g chl');
+Xb=sign(tb);
+subplot(3,3,3);
+imshow(Xb);
+title('Signum of b chl');
+XRE=sign(tRE);
+subplot(3,3,4);
+imshow(XRE);
+title('Signum of RE chl');
+XGR=sign(tGR);
+subplot(3,3,5);
+imshow(XGR);
+title('Signum of GR chl');
+XBL=sign(tBL);
+subplot(3,3,6);
+imshow(XBL);
+title('Signum of BL chl');
+XIntensity=sign(tIntensity);
+subplot(3,3,7);
+imshow(XIntensity);
+title('Signum of Intensity chl');
+XREGR=sign(tREGR);
+subplot(3,3,8);
+imshow(XREGR);
+title('Signum of REGR chl');
+XBLYE=sign(tBLYE);
+subplot(3,3,9);
+imshow(XBLYE);
+title('Signum of BLYE chl');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Inverse Transform
+ in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zr(aa,bb)=sum(sum(g(:,:,in).*Xr));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zg(aa,bb)=sum(sum(g(:,:,in).*Xg));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zb(aa,bb)=sum(sum(g(:,:,in).*Xb));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zRE(aa,bb)=sum(sum(g(:,:,in).*XRE));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zGR(aa,bb)=sum(sum(g(:,:,in).*XGR));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zBL(aa,bb)=sum(sum(g(:,:,in).*XBL));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zIntensity(aa,bb)=sum(sum(g(:,:,in).*XIntensity));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zREGR(aa,bb)=sum(sum(g(:,:,in).*XREGR));
+         in=in+1;
+    end
+ end
+
+in=1;
+ for u=0:n-1
+    for v=0:n-1
+         aa=u+1;bb=v+1;
+         zBLYE(aa,bb)=sum(sum(g(:,:,in).*XBLYE));
+         in=in+1;
+    end
+ end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+figure(4);
+subplot(3,3,1);
+Zr=abs(zr);
+imshow(Zr);
+title('abs iwht r');
+subplot(3,3,2);
+Zg=abs(zg);
+imshow(Zg);
+title('abs iwht g');
+subplot(3,3,3);
+Zb=abs(zb);
+imshow(Zb);
+title('abs iwht b');
+subplot(3,3,4);
+ZRE=abs(zRE);
+imshow(ZRE);
+title('abs iwht RE');
+subplot(3,3,5);
+ZGR=abs(zGR);
+imshow(ZGR);
+title('abs iwht GR');
+subplot(3,3,6);
+ZBL=abs(zBL);
+imshow(ZBL);
+title('abs iwht BL');
+subplot(3,3,7);
+ZIntensity=abs(zIntensity);
+imshow(ZIntensity);
+title('abs iwht Intensity');
+subplot(3,3,8);
+ZREGR=abs(zREGR);
+imshow(ZREGR);
+title('abs iwht REGR');
+subplot(3,3,9);
+ZBLYE=abs(zBLYE);
+imshow(ZBLYE);
+title('abs iwht BLYE');
+
+Er=entropy(Zr);
+Eg=entropy(Zg);
+Eb=entropy(Zb);
+ERE=entropy(ZRE);
+EGR=entropy(ZGR);
+EBL=entropy(ZBL);
+EIntensity=entropy(ZIntensity);
+EREGR=entropy(ZREGR);
+EBLYE=entropy(ZBLYE);
+
+for r = 1 : 8
+    for c = 1 : 8
+        Zr(r,c)=Zr(r,c)/Er;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        Zg(r,c)=Zg(r,c)/Eg;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        Zb(r,c)=Zb(r,c)/Eb;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        ZRE(r,c)=ZRE(r,c)/ERE;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        ZGR(r,c)=ZGR(r,c)/EGR;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        ZBL(r,c)=ZBL(r,c)/EBL;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        ZIntensity(r,c)=ZIntensity(r,c)/EIntensity;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        ZREGR(r,c)=ZREGR(r,c)/EREGR;
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        ZBLYE(r,c)=ZBLYE(r,c)/EBLYE;
+    end
+end
+
+
+for r = 1 : 8
+    for c = 1 : 8
+        SMAP(r,c) = Zr(r,c)+Zg(r,c)+Zb(r,c)+ZRE(r,c)+ZGR(r,c)+ZBL(r,c)+ZIntensity(r,c)+ZREGR(r,c)+ZBLYE(r,c);
+    end
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+R=rgbImage1(:,:,1);
+G=rgbImage1(:,:,2);
+B=rgbImage1(:,:,3);
+
+figure(5);
+subplot(2,3,1);
+imshow(R);
+subplot(2,3,2);
+imshow(G);
+subplot(2,3,3);
+imshow(B);
+
+ycbcr = rgb2ycbcr(rgbImage1);  
+    %convert to yuv space
+    %display the y component as a color image
+    ycbcry = ycbcr;
+    ycbcry(:,:,2) = 0;
+    ycbcry(:,:,3) = 0;
+    Y = ycbcr2rgb(ycbcry);
+    subplot(2,3,4);
+    imshow(Y);
+    % display the cb component as a color image
+    ycbcru = ycbcr;
+    ycbcru(:,:,1) = 0;
+    ycbcru(:,:,3) = 0;
+    Cb = ycbcr2rgb(ycbcru);
+    subplot(2,3,5);
+    imshow(Cb);
+    % display the cr component as a color image
+    ycbcrv = ycbcr;
+    ycbcrv(:,:,1) = 0;
+    ycbcrv(:,:,2) = 0;
+    Cr = ycbcr2rgb(ycbcrv);
+    subplot(2,3,6);
+    imshow(Cr);
+    
+    %     %display the y, cb, cr component as gray scale image
+        Ygs  = ycbcr(:,:,1);
+        Cbgs = ycbcr(:,:,2);
+        Crgs = ycbcr(:,:,3);
+    
+block_size=8;
+C1 = mat2cell(Ygs, repmat(block_size,[1 size(Ygs,1)/block_size]),...
+     repmat(block_size,[1 size(Ygs,2)/block_size]));
+C2 = mat2cell(Cbgs, repmat(block_size,[1 size(Cbgs,1)/block_size]),...
+     repmat(block_size,[1 size(Cbgs,2)/block_size]));
+C3 = mat2cell(Crgs, repmat(block_size,[1 size(Crgs,1)/block_size]),...
+     repmat(block_size,[1 size(Crgs,2)/block_size]));
+ 
+ 
+for r = 1:32
+    for c = 1:32   
+b=double(C1{r,c});
+[~,n]=size(C1{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tY(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+figure(6);
+subplot(3,2,1);
+imshow(tY);
+title('WHT of Y channel');
+subplot(3,2,2);
+imshow(log(abs(tY)),[ ]); colormap(jet); colorbar;
+title('abs Y chl');
+
+for r = 1:32
+    for c = 1:32   
+b=double(C2{r,c});
+[~,n]=size(C2{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tCb(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,2,3);
+imshow(tCb);
+title('WHT of Cb channel');
+subplot(3,2,4);
+imshow(log(abs(tCb)),[ ]); colormap(jet); colorbar;
+title('abs Cb chl');
+for r = 1:32
+    for c = 1:32    
+b=double(C3{r,c});
+[~,n]=size(C3{r,c});
+m=log2(n);
+g=zeros(n);
+t=zeros(n);
+z=zeros(n);
+c1=0;
+in=1;
+for u=0:n-1
+     binu=de2bi(u,m);
+    for v=0:n-1
+         binv=de2bi(v,m);
+        for x=0:n-1
+            binx=de2bi(x,m);
+            for y=0:n-1
+                biny=de2bi(y,m);
+                for i=1:m
+                    if i==1
+                        pu=binu(1,m);
+                        pv=binv(1,m);
+                    else
+                        pu=mod(binu(1,(m-i)+2)+binu(1,(m-(i+1))+2),2);
+                        pv=mod(binv(1,(m-i)+2)+binv(1,(m-(i+1))+2),2);
+                    end
+                    c=mod((binx(1,i)*pu)+(biny(1,i)*pv),2);
+                    c1=mod(c1+c,2);
+                end
+                aa=x+1;bb=y+1;
+                g(aa,bb,in)=(1/n)*(-1)^c1;
+                c1=0;
+            end
+        end
+         aa=u+1;bb=v+1;
+       tCr(aa,bb)=sum(sum(g(:,:,in).*b));
+       in=in+1;
+    end
+end
+    end
+end
+subplot(3,2,5);
+imshow(tCr);
+title('WHT of Cr channel');
+subplot(3,2,6);
+imshow(log(abs(tCr)),[ ]); colormap(jet); colorbar;
+title('abs Cr chl');
+%cat ycbcr channels
+for r = 1 : 8
+    for c = 1 : 8
+        H(r,c) = tY(r,c) + tCb(r,c) + tCr(r,c);
+    end
+end
+
+for r = 1 : 8
+    for c = 1 : 8
+        if(H(r,c)<0)
+        H(r,c) = (-1)*H(r,c);
+        end
+    end
+end
+
+for r = 1 : 8
+    for c = 1 : 8
+        Hm(r,c) = H(r,c) * SMAP(r,c);
+    end
+end
+q = 75;
+for r = 1 : 8
+    for c = 1 : 8
+       if ( Hm(r,c) == 0)
+           Hm(r,c) = 1;
+       end
+    end
+end
+for r = 1 : 8
+    for c = 1 : 8
+        Q(r,c) = q/Hm(r,c);
+        Qm(r,c) = round(Q(r,c),0);
+    end
+end
+
+%[M,N] = size(Qm);
+Qn = Qm(:);
+count = [0:1:126];
+total = sum(count);
+for i = 1 : 1 : 127
+    p(i) = count(i)/total;
+end
+[dict,avglen] = huffmandict(count,p);
+
+comp = huffmanenco(Qn,dict);
+    imwrite(comp,'C:\Users\vishali\Desktop\mini pro 18\pictures\COMPRESSED.png');
+%%%%%%%%
+ComI = imread('C:\Users\vishali\Desktop\mini pro 18\pictures\COMPRESSED.png');
+
+for i = 1: 554
+   New_com(i,1) = ComI(i,1);
+end
+for i = 555: 65536
+   New_com(i,1) = 0;
+end
+
+New_com = reshape(New_com,256,256);
+
+rgb_image=rgb2gray(rgbImage1);
+
+imwrite(rgbImage1,'C:\Users\vishali\Desktop\mini pro 18\pictures\ori.png');
+
+
+in = imfinfo('C:\Users\vishali\Desktop\mini pro 18\pictures\ori.png'); 
+k=imfinfo('C:\Users\vishali\Desktop\mini pro 18\pictures\COMPRESSED.png'); 
+ib=in.FileSize; 
+cb=k.FileSize; 
+cr=ib/cb;
+
+origImg = double(rgb_image);
+distImg = double(New_com);
+
+SC = sum(sum(origImg .* origImg)) / sum(sum(distImg .* distImg));
+
+[M N] = size(origImg);
+error = origImg - distImg;
+MSE1 = sum(sum(error .* error)) / (M * N);
+if(MSE1 > 0)
+    PSNR1 = 10*log(255*255/MSE1) / log(10);
+else
+    PSNR1 = 99;
+end
+
+NK = sum(sum(origImg .* distImg)) / sum(sum(origImg .* origImg));
+error = origImg - distImg;
+
+MD = max(max(error));
+AD = sum(sum(error)) / (M * N);
+NAE = sum(sum(abs(error))) / sum(sum(origImg));
+
